@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"fmt" // <--- PASTIKAN INI DIIMPOR untuk fmt.Sprintf
+	"fmt"
 	"net/http"
 
 	"filoti-backend/config"
@@ -11,7 +11,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// Input untuk membuat post
 type CreatePostInput struct {
 	Title      string `json:"title" binding:"required"`
 	Keterangan string `json:"keterangan" binding:"required"`
@@ -20,7 +19,6 @@ type CreatePostInput struct {
 	ItemType   string `json:"itemType" binding:"required"`
 }
 
-// CreatePost handler: memerlukan AuthRequired middleware
 func CreatePost(c *gin.Context) {
 	uidVal, exists := c.Get("userID")
 	if !exists {
@@ -31,7 +29,7 @@ func CreatePost(c *gin.Context) {
 	switch v := uidVal.(type) {
 	case uint:
 		currentUserID = v
-	case int: // Untuk jaga-jaga jika GORM menyimpannya sebagai int
+	case int:
 		currentUserID = uint(v)
 	default:
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid session"})
@@ -62,7 +60,7 @@ func CreatePost(c *gin.Context) {
 	status := models.Status{
 		PostID:    post.ID,
 		Status:    1,
-		UpdatedBy: currentUserID, // Gunakan ID admin yang sedang login
+		UpdatedBy: currentUserID,
 	}
 	if err := tx.Create(&status).Error; err != nil {
 		tx.Rollback()
@@ -70,8 +68,7 @@ func CreatePost(c *gin.Context) {
 		return
 	}
 
-	// PERBAIKAN DI SINI: Gunakan fmt.Sprintf untuk memformat ID menjadi string
-	message := fmt.Sprintf("Post baru dibuat oleh admin (ID: %d): %s", currentUserID, post.Title) // <--- PERBAIKAN PENTING
+	message := fmt.Sprintf("Post baru dibuat oleh admin (ID: %d): %s", currentUserID, post.Title)
 
 	notification := models.Notification{
 		PostID:  post.ID,
@@ -92,7 +89,6 @@ func CreatePost(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "Post created successfully", "post": post})
 }
 
-// GetPosts handler: mengambil semua post
 func GetPosts(c *gin.Context) {
 	var posts []models.Post
 	if err := config.DB.Preload("Status").Find(&posts).Error; err != nil {
@@ -102,7 +98,7 @@ func GetPosts(c *gin.Context) {
 
 	var postsToReturn []gin.H
 	for _, p := range posts {
-		username := "Administrator" // Placeholder
+		username := "Administrator"
 
 		postsToReturn = append(postsToReturn, gin.H{
 			"id":         p.ID,
@@ -124,15 +120,11 @@ func GetPosts(c *gin.Context) {
 	c.JSON(http.StatusOK, postsToReturn)
 }
 
-// --- TAMBAHKAN FUNGSI BARU INI UNTUK GET /posts/:id ---
-// GetPostByID handler: mengambil detail post berdasarkan ID
 func GetPostByID(c *gin.Context) {
-	// Ambil ID dari URL parameter
+
 	id := c.Param("id")
 	var post models.Post
 
-	// Cari post di database berdasarkan ID
-	// Preload Status dan mungkin Admin (jika AdminID ditambahkan ke Post)
 	if err := config.DB.Preload("Status").First(&post, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
@@ -142,34 +134,14 @@ func GetPostByID(c *gin.Context) {
 		return
 	}
 
-	// Anda mungkin ingin menambahkan AdminID ke model Post
-	// dan preload Admin di sini jika ingin menampilkan username admin yang membuat post ini
-	// username := "Administrator" // Placeholder
-
-	// Format respons agar sesuai dengan yang diharapkan frontend
-	// postToReturn := gin.H{
-	// 	"id":         post.ID,
-	// 	"username":   username, // Placeholder atau dari relasi Admin
-	// 	"image_url":  post.ImageURL,
-	// 	"title":      post.Title,
-	// 	"ruangan":    post.Ruangan,
-	// 	"keterangan": post.Keterangan,
-	// 	"item_type":  post.ItemType,
-	// 	"created_at": post.CreatedAt,
-	// 	"status":     post.Status.Status, // Mengirim status int
-	// }
-
 	c.JSON(http.StatusOK, post)
 }
 
-// controllers/post_controller.go (Tambahkan di bagian bawah file)
-
-// GetUniqueLocations handler: Mengambil daftar lokasi/ruangan unik dari semua post
 func GetUniqueLocations(c *gin.Context) {
 	var locations []string
 	if err := config.DB.Model(&models.Post{}).Distinct("ruangan").Pluck("ruangan", &locations).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch unique locations: " + err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, locations) // Mengembalikan array string
+	c.JSON(http.StatusOK, locations)
 }

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"filoti-backend/controllers"
-	"filoti-backend/middleware" // Menggunakan 'middleware' sesuai dengan kode Anda
+	"filoti-backend/middleware"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
@@ -26,7 +26,7 @@ func SetupRouter() *gin.Engine {
 		Path:     "/",
 		MaxAge:   3600 * 24,
 		HttpOnly: true,
-		Secure:   true, // Pastikan ini TRUE di Vercel jika menggunakan HTTPS
+		Secure:   true,
 		SameSite: http.SameSiteNoneMode,
 	})
 	r.Use(sessions.Sessions("gin_session", store))
@@ -46,35 +46,31 @@ func SetupRouter() *gin.Engine {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Handle OPTIONS preflight requests
 	r.OPTIONS("/*path", func(c *gin.Context) {
 		c.Status(http.StatusNoContent)
 	})
 
-	// --- Public Routes (Dapat diakses tanpa autentikasi) ---
 	r.POST("/signup", controllers.Signup)
 	r.POST("/login", controllers.Login)
 	r.POST("/guest-login", controllers.GuestLogin)
 	r.GET("/locations", controllers.GetUniqueLocations)
-	r.GET("/posts", controllers.GetPosts)        // Postingan dapat dilihat oleh siapa saja
-	r.GET("/posts/:id", controllers.GetPostByID) // Detail postingan dapat dilihat oleh siapa saja
+	r.GET("/posts", controllers.GetPosts)
+	r.GET("/posts/:id", controllers.GetPostByID)
 
-	// --- Authenticated Routes (Memerlukan session yang valid) ---
 	authorized := r.Group("/")
-	authorized.Use(middleware.AuthRequired()) // Menggunakan middleware dari paket 'middleware'
+	authorized.Use(middleware.AuthRequired())
 	{
-		// Rute untuk user yang sedang login
+
 		authorized.GET("/me", controllers.GetCurrentUser)
 		authorized.POST("/logout", controllers.Logout)
-		authorized.GET("/notifications", controllers.GetNotifications) // Endpoint notifikasi
+		authorized.GET("/notifications", controllers.GetNotifications)
 
-		// Rute Post yang memerlukan autentikasi (dan cek isAdmin di controllernya)
 		posts := authorized.Group("/posts")
 		{
-			posts.POST("", controllers.CreatePost)             // Membuat post (memerlukan login)
-			posts.PUT("/:id", controllers.UpdatePost)          // Update post (memerlukan login & isAdmin)
-			posts.DELETE("/:id", controllers.DeletePost)       // Hapus post (memerlukan login & isAdmin)
-			posts.PUT("/:id/done", controllers.MarkPostAsDone) // Tandai selesai (memerlukan login & isAdmin)
+			posts.POST("", controllers.CreatePost)
+			posts.PUT("/:id", controllers.UpdatePost)
+			posts.DELETE("/:id", controllers.DeletePost)
+			posts.PUT("/:id/done", controllers.MarkPostAsDone)
 		}
 	}
 

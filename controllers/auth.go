@@ -1,9 +1,9 @@
 package controllers
 
 import (
-	"log" // Tambahkan import log
+	"log"
 	"net/http"
-	"strings" // Tambahkan import strings
+	"strings"
 
 	"filoti-backend/config"
 	"filoti-backend/models"
@@ -26,18 +26,16 @@ type LoginInput struct {
 func Signup(c *gin.Context) {
 	var input SignupInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		log.Printf("Signup: Bad request - %v", err) // Log error binding
+		log.Printf("Signup: Bad request - %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Normalisasi username
 	input.Username = strings.ToLower(strings.TrimSpace(input.Username))
-	input.Password = strings.TrimSpace(input.Password) // Pangkas spasi password juga
+	input.Password = strings.TrimSpace(input.Password)
 
 	log.Printf("Signup: Attempting to signup user: %s", input.Username)
 
-	// Periksa username unik
 	var existing models.User
 	if err := config.DB.Where("username = ?", input.Username).First(&existing).Error; err == nil {
 		log.Printf("Signup: Username '%s' already taken.", input.Username)
@@ -45,7 +43,6 @@ func Signup(c *gin.Context) {
 		return
 	}
 
-	// Hash password
 	hashed, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("Signup: Failed to hash password for %s - %v", input.Username, err)
@@ -75,29 +72,26 @@ func Signup(c *gin.Context) {
 func Login(c *gin.Context) {
 	var input LoginInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		log.Printf("Login: Bad request - %v", err) // Log error binding
+		log.Printf("Login: Bad request - %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Normalisasi username
 	input.Username = strings.ToLower(strings.TrimSpace(input.Username))
-	input.Password = strings.TrimSpace(input.Password) // Pangkas spasi password juga
+	input.Password = strings.TrimSpace(input.Password)
 
 	log.Printf("Login: Attempting to login user: %s", input.Username)
 
 	var user models.User
-	// Tambahkan logging untuk kueri Find
+
 	if err := config.DB.Where("username = ?", input.Username).First(&user).Error; err != nil {
-		// Jika user tidak ditemukan, GORM akan mengembalikan gorm.ErrRecordNotFound
+
 		log.Printf("Login: User '%s' not found or DB error - %v", input.Username, err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username or password"})
 		return
 	}
 	log.Printf("Login: User '%s' found. Comparing passwords...", user.Username)
 
-	// Compare password
-	// Log hash yang diambil dari DB dan password yang diinput
 	log.Printf("Login: Hashed from DB: '%s', Input password: '%s'", user.Password, input.Password)
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
 		log.Printf("Login: Password mismatch for user '%s' - %v", user.Username, err)
@@ -106,7 +100,6 @@ func Login(c *gin.Context) {
 	}
 	log.Printf("Login: Password matched for user '%s'.", user.Username)
 
-	// Set session cookie
 	session := sessions.Default(c)
 	session.Set("id", int(user.ID))
 	if err := session.Save(); err != nil {
@@ -121,16 +114,11 @@ func Login(c *gin.Context) {
 func Logout(c *gin.Context) {
 	session := sessions.Default(c)
 	session.Clear()
-	session.Options(sessions.Options{MaxAge: -1}) // expire immediately
+	session.Options(sessions.Options{MaxAge: -1})
 	session.Save()
 	log.Println("User logged out.")
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out"})
 }
-
-// controllers/auth.go (Tambahkan fungsi ini)
-
-// GetCurrentUser handler: mendapatkan detail user yang sedang login
-// controllers/auth.go (Bagian fungsi GetCurrentUser)
 
 func GetCurrentUser(c *gin.Context) {
 	uidVal, exists := c.Get("userID")
@@ -151,29 +139,25 @@ func GetCurrentUser(c *gin.Context) {
 		return
 	}
 
-	// Kembalikan hanya informasi yang aman untuk frontend, termasuk is_admin
 	c.JSON(http.StatusOK, gin.H{
 		"id":         user.ID,
 		"username":   user.Username,
-		"is_admin":   user.IsAdmin, // Tambahkan is_admin di respons
+		"is_admin":   user.IsAdmin,
 		"created_at": user.CreatedAt,
 	})
 }
 
-// controllers/auth.go (Lanjutkan di file yang sama)
-
-// GuestLogin handler: login sebagai guest
 func GuestLogin(c *gin.Context) {
-	const guestUsername = "guest" // Username khusus untuk guest
+	const guestUsername = "guest"
 
 	var user models.User
-	// Cari user guest
+
 	if err := config.DB.Where("username = ?", guestUsername).First(&user).Error; err != nil {
-		// Jika user guest tidak ditemukan, buat baru
+
 		if err.Error() == "record not found" {
 			log.Printf("GuestLogin: Guest user '%s' not found, creating new one.", guestUsername)
-			// Buat password dummy untuk guest (tidak akan digunakan untuk login langsung)
-			hashedPassword, err := bcrypt.GenerateFromPassword([]byte("guestpassword123"), bcrypt.DefaultCost) // Password dummy, tidak akan digunakan untuk login
+
+			hashedPassword, err := bcrypt.GenerateFromPassword([]byte("guestpassword123"), bcrypt.DefaultCost)
 			if err != nil {
 				log.Printf("GuestLogin: Failed to hash dummy password for guest - %v", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to prepare guest account"})
@@ -183,14 +167,14 @@ func GuestLogin(c *gin.Context) {
 			guestUser := models.User{
 				Username: guestUsername,
 				Password: string(hashedPassword),
-				IsAdmin:  false, // Guest tidak boleh jadi admin
+				IsAdmin:  false,
 			}
 			if err := config.DB.Create(&guestUser).Error; err != nil {
 				log.Printf("GuestLogin: Failed to create guest user in DB - %v", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create guest account"})
 				return
 			}
-			user = guestUser // Set user sebagai guest yang baru dibuat
+			user = guestUser
 			log.Printf("GuestLogin: Guest user '%s' created successfully with ID %d.", user.Username, user.ID)
 		} else {
 			log.Printf("GuestLogin: DB error when looking for guest user - %v", err)
@@ -199,11 +183,10 @@ func GuestLogin(c *gin.Context) {
 		}
 	}
 
-	// Set session cookie untuk user guest
 	session := sessions.Default(c)
 	session.Set("id", int(user.ID))
-	// Simpan status IsAdmin di session agar mudah diakses frontend
-	session.Set("is_admin", user.IsAdmin) // Simpan is_admin di session
+
+	session.Set("is_admin", user.IsAdmin)
 	if err := session.Save(); err != nil {
 		log.Printf("GuestLogin: Failed to save session for guest user %s - %v", user.Username, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})

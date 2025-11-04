@@ -1,4 +1,3 @@
-// middleware/auth.go
 package middleware
 
 import (
@@ -20,10 +19,10 @@ func AuthRequired() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		// Cast to uint
+
 		userID, ok := uid.(uint)
 		if !ok {
-			// mungkin disimpan sebagai int?
+
 			if tmpInt, ok2 := uid.(int); ok2 {
 				userID = uint(tmpInt)
 			} else {
@@ -32,14 +31,14 @@ func AuthRequired() gin.HandlerFunc {
 				return
 			}
 		}
-		// Opsional: muat user dari DB untuk memastikan masih ada
+
 		var user models.User
 		if err := config.DB.First(&user, userID).Error; err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
 			c.Abort()
 			return
 		}
-		// Simpan userID (dan user) di context
+
 		c.Set("userID", userID)
 		c.Next()
 	}

@@ -3,8 +3,8 @@ package controllers
 import (
 	"fmt"
 	"net/http"
-	"strconv" // Tambahkan import strconv
-	"time"    // Tambahkan import time
+	"strconv"
+	"time"
 
 	"filoti-backend/config"
 	"filoti-backend/models"
@@ -13,20 +13,15 @@ import (
 	"gorm.io/gorm"
 )
 
-// ... (CreatePostInput, CreatePost, GetPosts, GetPostByID, GetUniqueLocations - kode yang sudah ada) ...
-
-// Input untuk mengupdate post
 type UpdatePostInput struct {
 	Title      string `json:"title"`
 	Keterangan string `json:"keterangan"`
 	Ruangan    string `json:"ruangan"`
-	ImageURL   string `json:"image_url"` // Bisa diupdate juga
-	// ItemType tidak diupdate karena tidak seharusnya berubah
+	ImageURL   string `json:"image_url"`
 }
 
-// UpdatePost handler: memerlukan AuthRequired middleware dan id post
 func UpdatePost(c *gin.Context) {
-	// Pastikan user admin yang login
+
 	uidVal, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
@@ -43,7 +38,6 @@ func UpdatePost(c *gin.Context) {
 		return
 	}
 
-	// Periksa apakah user adalah admin (jika Anda memiliki kolom IsAdmin di model User)
 	var user models.User
 	if err := config.DB.First(&user, currentUserID).Error; err != nil || !user.IsAdmin {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden: Only administrators can update posts"})
@@ -67,20 +61,18 @@ func UpdatePost(c *gin.Context) {
 		return
 	}
 
-	// Lakukan update pada post
 	config.DB.Model(&post).Updates(models.Post{
 		Title:      input.Title,
 		Keterangan: input.Keterangan,
 		Ruangan:    input.Ruangan,
-		ImageURL:   input.ImageURL, // Jika image_url bisa diupdate
+		ImageURL:   input.ImageURL,
 	})
 
 	c.JSON(http.StatusOK, gin.H{"message": "Post updated successfully", "post": post})
 }
 
-// DeletePost handler: memerlukan AuthRequired middleware dan id post
 func DeletePost(c *gin.Context) {
-	// Pastikan user admin yang login
+
 	uidVal, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
@@ -97,7 +89,6 @@ func DeletePost(c *gin.Context) {
 		return
 	}
 
-	// Periksa apakah user adalah admin (jika Anda memiliki kolom IsAdmin di model User)
 	var user models.User
 	if err := config.DB.First(&user, currentUserID).Error; err != nil || !user.IsAdmin {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden: Only administrators can delete posts"})
@@ -115,8 +106,6 @@ func DeletePost(c *gin.Context) {
 		return
 	}
 
-	// Hapus post
-	// GORM akan otomatis menghapus Status dan Notifikasi karena OnDelete:CASCADE
 	if err := config.DB.Delete(&post).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete post: " + err.Error()})
 		return
@@ -125,13 +114,11 @@ func DeletePost(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Post deleted successfully"})
 }
 
-// Input untuk menandai post sebagai selesai
 type MarkDoneInput struct {
 	ClaimerName string `json:"claimer_name" binding:"required"`
-	ProofImage  string `json:"proof_image"` // Opsional
+	ProofImage  string `json:"proof_image"`
 }
 
-// MarkPostAsDone handler: memerlukan AuthRequired middleware dan id post
 func MarkPostAsDone(c *gin.Context) {
 	uidVal, exists := c.Get("userID")
 	if !exists {
@@ -168,7 +155,7 @@ func MarkPostAsDone(c *gin.Context) {
 		return
 	}
 
-	tx := config.DB.Begin() // Mulai transaksi
+	tx := config.DB.Begin()
 
 	var status models.Status
 	if err := tx.Where("post_id = ?", postID).First(&status).Error; err != nil {
@@ -181,12 +168,11 @@ func MarkPostAsDone(c *gin.Context) {
 		return
 	}
 
-	// Update status post
-	status.Status = 0 // Misalnya, 0 berarti Done, 1 berarti Active
+	status.Status = 0
 	status.ClaimerName = input.ClaimerName
 	status.ProofImage = input.ProofImage
 	status.UpdatedBy = currentUserID
-	status.UpdatedAt = time.Now() // Pastikan UpdatedAt diperbarui
+	status.UpdatedAt = time.Now()
 
 	if err := tx.Save(&status).Error; err != nil {
 		tx.Rollback()
@@ -194,9 +180,8 @@ func MarkPostAsDone(c *gin.Context) {
 		return
 	}
 
-	// Buat notifikasi baru untuk penandaan selesai
 	var post models.Post
-	tx.First(&post, postID) // Ambil post untuk notifikasi
+	tx.First(&post, postID)
 
 	notificationMessage := fmt.Sprintf("Laporan '%s' telah diselesaikan oleh Admin", post.Title)
 	notification := models.Notification{
@@ -211,7 +196,7 @@ func MarkPostAsDone(c *gin.Context) {
 		return
 	}
 
-	tx.Commit() // Commit transaksi
+	tx.Commit()
 
 	c.JSON(http.StatusOK, gin.H{"message": "Post marked as done successfully", "status": status})
 }

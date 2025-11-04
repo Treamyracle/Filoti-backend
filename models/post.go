@@ -13,6 +13,6 @@ type Post struct {
 	ItemType   string    `json:"itemType"`
 	CreatedAt  time.Time `gorm:"autoCreateTime" json:"created_at"`
 
-	Status        Status         `gorm:"foreignKey:PostID;constraint:OnDelete:CASCADE" json:"status"` // Status sebagai relasi satu-ke-satu
+	Status        Status         `gorm:"foreignKey:PostID;constraint:OnDelete:CASCADE" json:"status"`
 	Notifications []Notification `gorm:"foreignKey:PostID;constraint:OnDelete:CASCADE" json:"-"`
 }

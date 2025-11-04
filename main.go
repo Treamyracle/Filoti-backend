@@ -5,11 +5,6 @@ import (
 	"net/http" // Required for http.ResponseWriter, http.Request, and http.ListenAndServe for local testing
 	"os"
 
-	// "time" // Not directly used in main.go now, can be removed if not needed elsewhere
-	// "github.com/gin-contrib/cors"            // Not needed here anymore as CORS is in routes.go
-	// "github.com/gin-contrib/sessions"        // Not needed here anymore as sessions is in routes.go
-	// "github.com/gin-contrib/sessions/cookie" // Not needed here anymore
-	// "github.com/gin-gonic/gin"               // Not needed here anymore if r is only assigned from SetupRouter()
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 
@@ -17,10 +12,8 @@ import (
 	"filoti-backend/routes"
 )
 
-// Global router instance, will be initialized by init()
 var r *gin.Engine
 
-// init function runs once when the Lambda is initialized (cold start)
 func init() {
 	// Load .env (only for local development)
 	if os.Getenv("VERCEL_ENV") != "production" { // Check if not in Vercel production env
@@ -32,8 +25,6 @@ func init() {
 	// Initialize DB (will stay alive as long as Lambda container is warm)
 	config.InitDB()
 
-	// Initialize Gin router and all its middleware/routes inside SetupRouter
-	// This is the router instance that will handle all requests
 	r = routes.SetupRouter()
 }
 

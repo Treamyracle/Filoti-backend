@@ -5,7 +5,7 @@ go 1.23.0
 toolchain go1.23.10
 
 require (
-	github.com/gin-contrib/cors v1.7.5
+	github.com/gin-contrib/cors v1.7.5 
 	github.com/gin-contrib/sessions v1.0.4
 	github.com/gin-gonic/gin v1.10.1
 	github.com/joho/godotenv v1.5.1

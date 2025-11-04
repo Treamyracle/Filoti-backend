@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"filoti-backend/models" // Pastikan path ini benar
+	"filoti-backend/models"
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
@@ -16,36 +16,25 @@ import (
 var DB *gorm.DB
 
 func InitDB() {
-	// Memuat .env jika ada
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using environment variables")
 	}
 
-	// Ambil detail koneksi dari environment variables untuk pooler
-	// CATATAN: user di Supabase pooler seringkali menyertakan project ref,
-	// contoh: "postgres.ugcabvgyvarjkwxifhxz"
 	user := os.Getenv("DB_USER")
 	password := os.Getenv("DB_PASSWORD")
-	host := os.Getenv("DB_HOST_POOLER") // Menggunakan nama variabel baru untuk host pooler
-	port := os.Getenv("DB_PORT_POOLER") // Menggunakan nama variabel baru untuk port pooler
+	host := os.Getenv("DB_HOST_POOLER")
+	port := os.Getenv("DB_PORT_POOLER")
 	dbname := os.Getenv("DB_NAME")
 
-	// Pastikan semua variabel lingkungan penting sudah diatur
 	if user == "" || password == "" || host == "" || port == "" || dbname == "" {
 		log.Fatal("One or more required database environment variables (DB_USER, DB_PASSWORD, DB_HOST_POOLER, DB_PORT_POOLER, DB_NAME) are not set. Please check your .env file.")
 	}
 
-	// Sslmode untuk pooler biasanya "disable" atau "require" tergantung setup Anda.
-	// Supabase seringkali merekomendasikan "prefer" atau "require" untuk direct,
-	// tapi pooler mungkin berbeda. Coba "disable" dulu jika "require" bermasalah.
-	// Jika ini untuk development lokal, "disable" seringkali lebih mudah.
-	sslmode := os.Getenv("DB_SSLMODE_POOLER") // Variabel baru untuk sslmode pooler
+	sslmode := os.Getenv("DB_SSLMODE_POOLER")
 	if sslmode == "" {
-		sslmode = "disable" // Default untuk pooler di development. Ganti ke "require" di produksi jika aman.
+		sslmode = "disable"
 	}
 
-	// Buat DSN untuk Connection Pooler
-	// Penting: Sertakan parameter `pgbouncer=true` di akhir DSN
 	dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=Asia/Jakarta&pgbouncer=true",
 		host, user, password, dbname, port, sslmode,
@@ -54,7 +43,7 @@ func InitDB() {
 	log.Printf("Attempting to connect to database using DSN (Pooler): %s", dsn)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info), // Log semua kueri dan operasi GORM
+		Logger: logger.Default.LogMode(logger.Info),
 	})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
@@ -62,7 +51,6 @@ func InitDB() {
 
 	DB = db
 
-	// Opsional: Ping database untuk memastikan koneksi aktif
 	sqlDB, err := DB.DB()
 	if err != nil {
 		log.Fatalf("Failed to get generic database object: %v", err)
@@ -73,7 +61,6 @@ func InitDB() {
 	}
 	log.Println("Successfully connected to the database!")
 
-	// AutoMigrate models
 	err = DB.AutoMigrate(
 		&models.User{},
 		&models.Post{},
