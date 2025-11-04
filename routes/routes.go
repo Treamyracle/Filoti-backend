@@ -50,27 +50,31 @@ func SetupRouter() *gin.Engine {
 		c.Status(http.StatusNoContent)
 	})
 
-	r.POST("/signup", controllers.Signup)
-	r.POST("/login", controllers.Login)
-	r.POST("/guest-login", controllers.GuestLogin)
-	r.GET("/locations", controllers.GetUniqueLocations)
-	r.GET("/posts", controllers.GetPosts)
-	r.GET("/posts/:id", controllers.GetPostByID)
-
-	authorized := r.Group("/")
-	authorized.Use(middleware.AuthRequired())
+	// === PERUBAHAN UTAMA: BUAT GRUP /api ===
+	// Semua rute Anda akan berada di dalam grup ini
+	api := r.Group("/api")
 	{
+		api.POST("/signup", controllers.Signup)
+		api.POST("/login", controllers.Login)
+		api.POST("/guest-login", controllers.GuestLogin)
+		api.GET("/locations", controllers.GetUniqueLocations)
+		api.GET("/posts", controllers.GetPosts)
+		api.GET("/posts/:id", controllers.GetPostByID)
 
-		authorized.GET("/me", controllers.GetCurrentUser)
-		authorized.POST("/logout", controllers.Logout)
-		authorized.GET("/notifications", controllers.GetNotifications)
-
-		posts := authorized.Group("/posts")
+		authorized := api.Group("/") // Rute di dalam /api yang memerlukan auth
+		authorized.Use(middleware.AuthRequired())
 		{
-			posts.POST("", controllers.CreatePost)
-			posts.PUT("/:id", controllers.UpdatePost)
-			posts.DELETE("/:id", controllers.DeletePost)
-			posts.PUT("/:id/done", controllers.MarkPostAsDone)
+			authorized.GET("/me", controllers.GetCurrentUser)
+			authorized.POST("/logout", controllers.Logout)
+			authorized.GET("/notifications", controllers.GetNotifications)
+
+			posts := authorized.Group("/posts")
+			{
+				posts.POST("", controllers.CreatePost)
+				posts.PUT("/:id", controllers.UpdatePost)
+				posts.DELETE("/:id", controllers.DeletePost)
+				posts.PUT("/:id/done", controllers.MarkPostAsDone)
+			}
 		}
 	}
 
