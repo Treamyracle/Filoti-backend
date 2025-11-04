@@ -6,7 +6,6 @@ import (
 
 	"filoti-backend/models" // Pastikan path ini sesuai dengan struktur proyek Anda
 
-	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -15,13 +14,6 @@ import (
 var DB *gorm.DB
 
 func InitDB() {
-	// Muat file .env, abaikan jika tidak ada (misalnya dalam produksi)
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, using environment variables")
-	}
-
-	// Ambil DATABASE_URL dari environment
-	// Neon menyediakan ini sebagai satu connection string lengkap
 	dsn := os.Getenv("DATABASE_URL")
 
 	// Validasi bahwa DATABASE_URL ada
