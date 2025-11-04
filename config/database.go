@@ -1,11 +1,10 @@
 package config
 
 import (
-	"fmt"
 	"log"
 	"os"
 
-	"filoti-backend/models"
+	"filoti-backend/models" // Pastikan path ini sesuai dengan struktur proyek Anda
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
@@ -16,32 +15,23 @@ import (
 var DB *gorm.DB
 
 func InitDB() {
+	// Muat file .env, abaikan jika tidak ada (misalnya dalam produksi)
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using environment variables")
 	}
 
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	host := os.Getenv("DB_HOST_POOLER")
-	port := os.Getenv("DB_PORT_POOLER")
-	dbname := os.Getenv("DB_NAME")
+	// Ambil DATABASE_URL dari environment
+	// Neon menyediakan ini sebagai satu connection string lengkap
+	dsn := os.Getenv("DATABASE_URL")
 
-	if user == "" || password == "" || host == "" || port == "" || dbname == "" {
-		log.Fatal("One or more required database environment variables (DB_USER, DB_PASSWORD, DB_HOST_POOLER, DB_PORT_POOLER, DB_NAME) are not set. Please check your .env file.")
+	// Validasi bahwa DATABASE_URL ada
+	if dsn == "" {
+		log.Fatal("DATABASE_URL environment variable is not set. Please check your .env file or environment configuration.")
 	}
 
-	sslmode := os.Getenv("DB_SSLMODE_POOLER")
-	if sslmode == "" {
-		sslmode = "disable"
-	}
+	log.Println("Attempting to connect to database using DATABASE_URL...")
 
-	dsn := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=Asia/Jakarta&pgbouncer=true",
-		host, user, password, dbname, port, sslmode,
-	)
-
-	log.Printf("Attempting to connect to database using DSN (Pooler): %s", dsn)
-
+	// Buka koneksi GORM menggunakan DSN dari DATABASE_URL
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	})
@@ -49,18 +39,23 @@ func InitDB() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
+	// Tetapkan instance DB global
 	DB = db
 
+	// Dapatkan objek sql.DB dasar untuk melakukan Ping
 	sqlDB, err := DB.DB()
 	if err != nil {
 		log.Fatalf("Failed to get generic database object: %v", err)
 	}
+
+	// Lakukan Ping untuk memastikan koneksi benar-benar hidup
 	err = sqlDB.Ping()
 	if err != nil {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
 	log.Println("Successfully connected to the database!")
 
+	// Jalankan AutoMigrate seperti sebelumnya
 	err = DB.AutoMigrate(
 		&models.User{},
 		&models.Post{},
