@@ -11,9 +11,5 @@
       "src": "/(.*)",
       "dest": "main.go"
     }
-  ],
-  "env": {
-    "DATABASE_URL": "postgresql://postgres:blackpink12345@db.ugcabvgyvarjkwxifhxz.supabase.co:5432/postgres",
-    "SESSION_SECRET": "test"
-  }
+  ]
 }

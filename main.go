@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 
 	"filoti-backend/config"
 	"filoti-backend/routes"
@@ -15,14 +14,13 @@ import (
 var r *gin.Engine
 
 func init() {
-	// Load .env (only for local development)
-	if os.Getenv("VERCEL_ENV") != "production" { // Check if not in Vercel production env
-		if err := godotenv.Load(); err != nil {
-			log.Println("No .env file found, using environment variables")
-		}
+	dsn := os.Getenv("DATABASE_URL")
+
+	// Validasi bahwa DATABASE_URL ada
+	if dsn == "" {
+		log.Fatal("GAADA ANJAY!")
 	}
 
-	// Initialize DB (will stay alive as long as Lambda container is warm)
 	config.InitDB()
 
 	r = routes.SetupRouter()
