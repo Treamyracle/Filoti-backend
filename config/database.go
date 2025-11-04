@@ -4,8 +4,9 @@ import (
 	"log"
 	"os"
 
-	"filoti-backend/models" // Pastikan path ini sesuai dengan struktur proyek Anda
+	"filoti-backend/models" // Pastikan path ini sesuai
 
+	"github.com/joho/godotenv" // <-- TAMBAHKAN IMPORT
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -13,7 +14,17 @@ import (
 
 var DB *gorm.DB
 
+// loadEnv memuat .env, mengabaikan error jika file tidak ada (untuk Vercel)
+func loadEnv() {
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, using environment variables")
+	}
+}
+
 func InitDB() {
+	// Panggil loadEnv() di sini
+	loadEnv() // <-- TAMBAHKAN BARIS INI
+
 	dsn := os.Getenv("DATABASE_URL")
 
 	// Validasi bahwa DATABASE_URL ada
